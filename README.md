@@ -3,5 +3,5 @@ Repository containing various python mini project (mostly games)
 
 ## Games
 
-Here the name of the following game :
+Here are the name of the implemented game :
 - Tron
