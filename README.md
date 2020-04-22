@@ -1,5 +1,6 @@
 # Python-mini-project
-Repository containing various python mini project (mostly games)
+Repository containing various python mini project (mostly games) 
+Authors : SZELES Mael, CORRADI Mathilde, MANETA Alexandre
 
 ## Games
 
