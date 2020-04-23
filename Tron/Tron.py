@@ -55,7 +55,7 @@ GameInit = Game(GInit,6,4)
 L = 20  # largeur d'une case du jeu en pixel    
 largeurPix = LARGEUR * L
 hauteurPix = HAUTEUR * L
-nb = 50000
+nb = 10000
 
 
 Window = tk.Tk()
@@ -322,7 +322,7 @@ def Partie():
         # rappelle la fonction Partie() dans 30ms
         # entre temps laisse l'OS réafficher l'interface
         tsart = time.time()
-        Window.after(1000,Partie) 
+        Window.after(1,Partie) 
         tfin = time.time()
         print(f"temps : {tfin - tsart}")
     else :
