@@ -315,7 +315,8 @@ CurrentGame = GameInit.copy()
 
 def Partie():
 
-    PartieTermine = PlayParallel(CurrentGame)
+    PartieTermine = PlayParallel(CurrentGame) # Version parallèle
+    # PartieTermine = Play(CurrentGame) # Version simple
     
     if not PartieTermine :
         Affiche(CurrentGame)
