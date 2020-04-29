@@ -2,6 +2,7 @@ import random
 import tkinter as tk
 from tkinter import font  as tkfont
 import numpy as np
+import sys
  
 
 #################################################################
@@ -47,7 +48,7 @@ score = 0
 
 Window = tk.Tk()
 Window.geometry(str(screeenWidth)+"x"+str(screenHeight))   # taille de la fenetre
-Window.title("ESIEE - PACMAN")
+Window.title("MaCoSz - ESIEE - PACMAN")
 
 # création de la frame principale stockant plusieurs pages
 
@@ -75,7 +76,7 @@ def AfficherPage(id):
     
 def WindowAnim():
     MainLoop()
-    Window.after(500,WindowAnim)
+    Window.after(500,WindowAnim) #500
 
 Window.after(100,WindowAnim)
 
@@ -202,7 +203,7 @@ def Affiche():
      
    # texte blabla
    
-   canvas.create_text(screeenWidth // 2, screenHeight- 50 , text = "Hello", fill ="yellow", font = PoliceTexte)
+   canvas.create_text(screeenWidth // 2, screenHeight- 50 , text = "Score : "+str(score), fill ="yellow", font = PoliceTexte)
  
             
 #################################################################
@@ -231,10 +232,13 @@ def GhostsPossibleMove(x,y):
 def IA():
    global PacManPos, Ghosts
    #deplacement Pacman
-   L = PacManPossibleMove()
-   choix = random.randrange(len(L))
-   PacManPos[0] += L[choix][0]
-   PacManPos[1] += L[choix][1]
+   # L = PacManPossibleMove()
+   # choix = random.randrange(len(L))
+   x,y = CheckMove()
+   PacManPos[0] = x
+   PacManPos[1] = y
+   # PacManPos[0] += L[choix][0]
+   # PacManPos[1] += L[choix][1]
    
    #deplacement Fantome
    for F in Ghosts:
@@ -251,23 +255,198 @@ def EatingGUMS():
    global score
    for x in range(LARGEUR):
       for y in range(HAUTEUR):
-#           print(x,y,GUM[x][y])
          if(GUM[x][y] == 1):
             if(PacManPos[0]==x and PacManPos[1]==y):
                GUM[x][y]=0
                score += 1
-               print(score)
+               updateDistanceMap()
 
- 
+def InitDistanceMap():
+   DistanceMap = np.zeros(TBL.shape)
+   
+   for x in range(LARGEUR):
+      for y in range(HAUTEUR):
+         if (TBL[x][y] == 1  or TBL[x][y] == 2): #ok ?
+            DistanceMap[x][y] = sys.maxsize
+         elif (GUM[x][y] == 1):
+            DistanceMap[x][y] = 0
+         else: #utile ?
+            DistanceMap[x][y] = 100 #utile ?
+   return DistanceMap
 
+def updateDistanceMap():
+   global DistanceMap
+   DistanceMap = InitDistanceMap()
+   true = 1
+   while (true):
+      # print("on reboucle")
+      tmpDistanceMap = DistanceMap
+      for y in range(HAUTEUR):
+         for x in range(LARGEUR):
+            if (DistanceMap[x][y] >= 0 and DistanceMap[x][y]<sys.maxsize and GUM[x][y]==0): #attention à ne pas sortir du jeu
+               if(x-1 >=0):
+                  left = DistanceMap[x-1][y]
+               else:
+                  left = sys.maxsize
+               if(x+1<=LARGEUR):
+                  right = DistanceMap[x+1][y]
+               else:
+                  right = sys.maxsize
+               if(y+1<=HAUTEUR):
+                  down = DistanceMap[x][y+1]
+               else:
+                  down = sys.maxsize
+               if(y-1 >=0):
+                  up = DistanceMap[x][y-1]
+               else:
+                  up = sys.maxsize
+               minimum = min(left, right, up, down)
+               if(minimum < DistanceMap[x][y]):
+                  # print("avant :", DistanceMapTest[x][y])
+                  DistanceMap[x][y] = minimum+1
+                  # print("après : ", DistanceMapTest[x][y])
+      if(tmpDistanceMap == DistanceMap).all():
+         # print("on sort")
+         #true = 0
+         break
+
+####### TESTS
+
+T = [ [0,0,0,0,0],
+        [0,1,1,1,0],
+        [0,0,0,1,0],
+        [1,1,0,1,0],
+        [1,1,0,0,0],
+   ]
+
+def PlacementsGUMTest():  # placements des pacgums
+   GUMT = np.zeros(TBL.shape)
+   GUMT[2][0] = 1
+   GUMT[4][4] = 1
+   return GUMT
+            
+GUMT = PlacementsGUMTest()  
+        
+T = np.array(T,dtype=np.int32)
+T = T.transpose()  ## ainsi, on peut écrire TBL[x][y]
+
+def InitDistanceMapTest():
+   DistanceMapTest = np.zeros(TBL.shape)
+   
+   for x in range(5):
+      for y in range(5):
+         if (T[x][y] == 1  or T[x][y] == 2): #ok ?
+            DistanceMapTest[x][y] = sys.maxsize
+         elif (GUMT[x][y] == 1):
+            DistanceMapTest[x][y] = 0
+         else: #utile ?
+            DistanceMapTest[x][y] = 100 #utile ?
+   return DistanceMapTest
+
+DistanceMapTest = InitDistanceMapTest()
+
+def updateDistanceMapTest():
+   global DistanceMapTest
+   true = 1
+   while (true):
+      # print("on reboucle")
+      tmpDistanceMap = DistanceMapTest
+      for y in range(5):
+         for x in range(5):
+            if (DistanceMapTest[x][y] > 0 and DistanceMapTest[x][y]<sys.maxsize):
+               if(x-1 >=0):
+                  left = DistanceMapTest[x-1][y]
+               else:
+                  left = sys.maxsize
+               if(x+1<=4):
+                  right = DistanceMapTest[x+1][y]
+               else:
+                  right = sys.maxsize
+               if(y+1<=4):
+                  down = DistanceMapTest[x][y+1]
+               else:
+                  down = sys.maxsize
+               if(y-1 >=0):
+                  up = DistanceMapTest[x][y-1]
+               else:
+                  up = sys.maxsize
+               minimum = min(left, right, up, down)
+               if(minimum < DistanceMapTest[x][y]):
+                  print("affichage")
+                  AfficheDistanceMapTest()
+                  # print("avant :", DistanceMapTest[x][y])
+                  DistanceMapTest[x][y] = minimum+1
+                  # print("après : ", DistanceMapTest[x][y])
+      if(tmpDistanceMap == DistanceMapTest).all():
+         # print("on sort")
+         true = 0
+         break
+
+def AfficheDistanceMapTest():
+   global DistanceMapTest
+   for x in range(5):
+      print("(",end='')
+      for y in range(5):
+         if(DistanceMapTest[y][x] > 1000):
+            print("M", end='')
+         else:
+            print(DistanceMapTest[y][x], end='')
+         print(",", end='')
+      print(") \n")
+
+#############
+
+def CheckMove():
+   x,y = PacManPos
+   MinMove = sys.maxsize
+   MinMoveX = sys.maxsize
+   MinMoveY = sys.maxsize
+   if(TBL[x-1][y] == 0 and DistanceMap[x-1][y]<MinMove and x-1>=0): #left
+      # print("left :",MinMove)
+      MinMove = DistanceMap[x-1][y]
+      MinMoveX = x-1
+      MinMoveY = y
+   if(TBL[x+1][y] == 0 and DistanceMap[x+1][y]<MinMove and x+1<=LARGEUR): #right
+      # print("right :",MinMove)
+      MinMove = DistanceMap[x+1][y]
+      MinMoveX = x+1
+      MinMoveY = y
+   if(TBL[x][y+1] == 0 and DistanceMap[x][y+1]<MinMove and y+1<=HAUTEUR): #down
+      MinMove = DistanceMap[x][y+1]
+      # print("down :",MinMove)
+      MinMoveX = x
+      MinMoveY = y+1
+   if(TBL[x][y-1] == 0 and DistanceMap[x][y-1]<MinMove and y-1>=0): #up
+      MinMove = DistanceMap[x][y-1]
+      # print("up :",MinMove)
+      MinMoveX = x
+      MinMoveY = y-1
+   # print("move : ",MinMove)
+   return MinMoveX, MinMoveY
+
+
+def AfficheDistanceMap():
+   global DistanceMap
+   for y in range(HAUTEUR):
+      print("(",end='')
+      for x in range(LARGEUR):
+         if(DistanceMap[x][y] > 1000):
+            print("M", end='')
+         else:
+            print(DistanceMap[x][y], end='')
+         print(",", end='')
+      print(") \n")
+      
 #################################################################
 ##
 ##   GAME LOOP
 
 def MainLoop():
-  IA()
-  Affiche()
-  EatingGUMS()  
+   updateDistanceMap()
+   IA()
+   EatingGUMS()
+   AfficheDistanceMap()
+   Affiche()
  
  
 ###########################################:
@@ -275,8 +454,4 @@ def MainLoop():
 
 AfficherPage(0)
 Window.mainloop()
-   
-   
-    
-   
    
