@@ -101,7 +101,7 @@ def PlacementsGUM():  # placements des pacgums
    
    for x in range(LARGEUR):
       for y in range(HAUTEUR):
-         if ( TBL[x][y] == 0):
+         if ( TBL[x][y] == 0 and y != 5 and x>12):
             GUM[x][y] = 1
    return GUM
             
@@ -237,6 +237,7 @@ def IA():
    x,y = CheckMove()
    PacManPos[0] = x
    PacManPos[1] = y
+   EatingGUMS()
    # PacManPos[0] += L[choix][0]
    # PacManPos[1] += L[choix][1]
    
@@ -253,13 +254,13 @@ def IA():
 
 def EatingGUMS():
    global score
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR):
-         if(GUM[x][y] == 1):
-            if(PacManPos[0]==x and PacManPos[1]==y):
-               GUM[x][y]=0
-               score += 1
-               updateDistanceMap()
+   x,y = PacManPos
+   if(GUM[x][y] == 1):
+      GUM[x][y]=0
+      score += 1
+      DistanceMap[x][y] = 100
+      updateDistanceMap()
+      print("MIAM")
 
 def InitDistanceMap():
    DistanceMap = np.zeros(TBL.shape)
@@ -274,25 +275,31 @@ def InitDistanceMap():
             DistanceMap[x][y] = 100 #utile ?
    return DistanceMap
 
+DistanceMap = InitDistanceMap()
+
+
 def updateDistanceMap():
    global DistanceMap
-   DistanceMap = InitDistanceMap()
-   true = 1
-   while (true):
+   # DistanceMap = InitDistanceMap()
+   change = 0
+   while (True):
       # print("on reboucle")
-      tmpDistanceMap = DistanceMap
-      for y in range(HAUTEUR):
-         for x in range(LARGEUR):
-            if (DistanceMap[x][y] >= 0 and DistanceMap[x][y]<sys.maxsize and GUM[x][y]==0): #attention à ne pas sortir du jeu
+      # tmpDistanceMap = np.clone(DistanceMap)
+      change = 0
+      for x in range(LARGEUR):
+         for y in range(HAUTEUR):
+            if(DistanceMap[x][y] == sys.maxsize or DistanceMap[x][y] == 0):
+               continue
+            else:
                if(x-1 >=0):
                   left = DistanceMap[x-1][y]
                else:
                   left = sys.maxsize
-               if(x+1<=LARGEUR):
+               if(x+1<LARGEUR):
                   right = DistanceMap[x+1][y]
                else:
                   right = sys.maxsize
-               if(y+1<=HAUTEUR):
+               if(y+1<HAUTEUR):
                   down = DistanceMap[x][y+1]
                else:
                   down = sys.maxsize
@@ -301,100 +308,18 @@ def updateDistanceMap():
                else:
                   up = sys.maxsize
                minimum = min(left, right, up, down)
-               if(minimum < DistanceMap[x][y]):
-                  # print("avant :", DistanceMapTest[x][y])
+
+               if(minimum < DistanceMap[x][y] and minimum+1 != DistanceMap[x][y]):
+                  # print(f"left : {left}, right : {right}, down : {down}, up : {up}")
+         #          # print("avant :", DistanceMapTest[x][y])
                   DistanceMap[x][y] = minimum+1
-                  # print("après : ", DistanceMapTest[x][y])
-      if(tmpDistanceMap == DistanceMap).all():
-         # print("on sort")
-         #true = 0
+                  change = 1
+         #          # print("après : ", DistanceMapTest[x][y])
+      if(change == 0):
+         print("on sort")
          break
 
-####### TESTS
-
-T = [ [0,0,0,0,0],
-        [0,1,1,1,0],
-        [0,0,0,1,0],
-        [1,1,0,1,0],
-        [1,1,0,0,0],
-   ]
-
-def PlacementsGUMTest():  # placements des pacgums
-   GUMT = np.zeros(TBL.shape)
-   GUMT[2][0] = 1
-   GUMT[4][4] = 1
-   return GUMT
-            
-GUMT = PlacementsGUMTest()  
-        
-T = np.array(T,dtype=np.int32)
-T = T.transpose()  ## ainsi, on peut écrire TBL[x][y]
-
-def InitDistanceMapTest():
-   DistanceMapTest = np.zeros(TBL.shape)
-   
-   for x in range(5):
-      for y in range(5):
-         if (T[x][y] == 1  or T[x][y] == 2): #ok ?
-            DistanceMapTest[x][y] = sys.maxsize
-         elif (GUMT[x][y] == 1):
-            DistanceMapTest[x][y] = 0
-         else: #utile ?
-            DistanceMapTest[x][y] = 100 #utile ?
-   return DistanceMapTest
-
-DistanceMapTest = InitDistanceMapTest()
-
-def updateDistanceMapTest():
-   global DistanceMapTest
-   true = 1
-   while (true):
-      # print("on reboucle")
-      tmpDistanceMap = DistanceMapTest
-      for y in range(5):
-         for x in range(5):
-            if (DistanceMapTest[x][y] > 0 and DistanceMapTest[x][y]<sys.maxsize):
-               if(x-1 >=0):
-                  left = DistanceMapTest[x-1][y]
-               else:
-                  left = sys.maxsize
-               if(x+1<=4):
-                  right = DistanceMapTest[x+1][y]
-               else:
-                  right = sys.maxsize
-               if(y+1<=4):
-                  down = DistanceMapTest[x][y+1]
-               else:
-                  down = sys.maxsize
-               if(y-1 >=0):
-                  up = DistanceMapTest[x][y-1]
-               else:
-                  up = sys.maxsize
-               minimum = min(left, right, up, down)
-               if(minimum < DistanceMapTest[x][y]):
-                  print("affichage")
-                  AfficheDistanceMapTest()
-                  # print("avant :", DistanceMapTest[x][y])
-                  DistanceMapTest[x][y] = minimum+1
-                  # print("après : ", DistanceMapTest[x][y])
-      if(tmpDistanceMap == DistanceMapTest).all():
-         # print("on sort")
-         true = 0
-         break
-
-def AfficheDistanceMapTest():
-   global DistanceMapTest
-   for x in range(5):
-      print("(",end='')
-      for y in range(5):
-         if(DistanceMapTest[y][x] > 1000):
-            print("M", end='')
-         else:
-            print(DistanceMapTest[y][x], end='')
-         print(",", end='')
-      print(") \n")
-
-#############
+updateDistanceMap()
 
 def CheckMove():
    x,y = PacManPos
@@ -433,19 +358,26 @@ def AfficheDistanceMap():
          if(DistanceMap[x][y] > 1000):
             print("M", end='')
          else:
-            print(DistanceMap[x][y], end='')
+            if(PacManPos[0] == x and PacManPos[1] == y):
+               print("X", end='')
+            else:
+               print(int(DistanceMap[x][y]), end='')
          print(",", end='')
       print(") \n")
+
+i = 0
       
 #################################################################
 ##
 ##   GAME LOOP
 
 def MainLoop():
-   updateDistanceMap()
+   global i
+   i += 1
+   print(i)
+   # updateDistanceMap()
    IA()
-   EatingGUMS()
-   AfficheDistanceMap()
+   # AfficheDistanceMap()
    Affiche()
  
  
@@ -454,4 +386,3 @@ def MainLoop():
 
 AfficherPage(0)
 Window.mainloop()
-   
