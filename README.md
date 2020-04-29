@@ -7,3 +7,5 @@ Authors : SZELES Mael, CORRADI Mathilde, MANETA Alexandre
 
 Here are the name of the implemented games :
 - Tron
+- PacMan
+- Tic Tac Toe + Puissance 4
