@@ -169,11 +169,12 @@ def chooseIaMove(grille):
     return (result[0],result[1])
 
 def joueurSimule(grille,turn):
+    player = 2-turn
     L= getAvailablePosition(grille)
     result = None
     for K in L:
-        grille[K[0]][K[1]]=2-turn
-        R = partieFinie(grille,2-turn,(K[0],K[1]))
+        grille[K[0]][K[1]]=player
+        R = partieFinie(grille,player,(K[0],K[1]))
         if R=='X': 
             R = joueurSimule(grille,(turn+1)%2)[2]
         else:
@@ -181,7 +182,7 @@ def joueurSimule(grille,turn):
             return (K[0],K[1],R)
         if result == None:
             result = (K[0],K[1],R)
-        elif bestMove(R,result[2],2-turn):
+        elif bestMove(R,result[2],player):
             result = (K[0],K[1],R)
         grille[K[0]][K[1]]=0
     
