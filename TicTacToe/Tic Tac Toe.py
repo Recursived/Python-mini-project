@@ -75,6 +75,9 @@ GameState = {
 def checkGameFinished(grille):
     return all(grille[i][j] != 0 for i in range(3) for j in range(3))
 
+def IsEmpty(grille):
+    return all(grille[i][j] == 0 for i in range(3) for j in range(3))
+
 def resetGame():
     global Grille
     Grille = np.copy(GrilleReset)
@@ -153,8 +156,56 @@ def Dessine(gagnant):
             font="Times 16 italic bold",
             text=f"red : {win_red} - yellow : {win_yellow}\nClick to restart"
         )
-       
-        
+
+####################################################################################
+#
+#  fnt appelée pour faire jouer l'ia
+
+def chooseIaMove(grille):
+    if IsEmpty(grille):
+        return (1,1)
+    result = joueurSimule(grille,0)
+    print(result[2])
+    return (result[0],result[1])
+
+def joueurSimule(grille,turn):
+    L= getAvailablePosition(grille)
+    result = None
+    for K in L:
+        grille[K[0]][K[1]]=2-turn
+        R = partieFinie(grille,2-turn,(K[0],K[1]))
+        if R=='X': 
+            R = joueurSimule(grille,(turn+1)%2)[2]
+        else:
+            grille[K[0]][K[1]]=0
+            return (K[0],K[1],R)
+        if result == None:
+            result = (K[0],K[1],R)
+        elif bestMove(R,result[2],2-turn):
+            result = (K[0],K[1],R)
+        grille[K[0]][K[1]]=0
+    
+    return result
+
+def partieFinie(grille,player,move):
+    if(move!=None):
+        win = ['H','AI']
+        if victoryCheck(grille,move[0],move[1],player):
+            return win[player-1]
+    if checkGameFinished(grille):
+        return 'N'
+    return 'X'
+
+def bestMove(move1,move2,player):
+    moveOrder = {'AI':2, 'N':1, 'H':0}
+    if player == 1:
+        return moveOrder.get(move1)<moveOrder.get(move2)
+    else:
+        return moveOrder.get(move1)>moveOrder.get(move2)
+
+
+
+####################################################################################        
   
 ####################################################################################
 #
@@ -176,7 +227,9 @@ def MouseClick(event):
             if ( (x<0) or (x>2) or (y<0) or (y>2) ) : return
             if Grille[x][y] != 0: return
         else: # PARTIE IA 
-            x, y = random.choice(getAvailablePosition(Grille))
+            IaMove = chooseIaMove(Grille)
+            x = IaMove[0]
+            y = IaMove[1]
         
         print(">> clicked at", x,y)
         gagnant = Play(x,y,Tour)  # gestion du joueur humain et de l'IA
