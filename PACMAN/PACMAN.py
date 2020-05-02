@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import font  as tkfont
 import numpy as np
 import sys
+import enum
  
 
 #################################################################
@@ -40,6 +41,15 @@ screeenWidth = (LARGEUR+1) * ZOOM
 screenHeight = (HAUTEUR+2) * ZOOM
 
 score = 0
+eaten = 0
+totalGum = 0
+gameStatus = "playing"
+
+class Direction (enum.Enum):
+   left = 1
+   right = 2
+   up = 3
+   down = 4
  
 
 ###########################################################################################
@@ -98,11 +108,12 @@ canvas.configure(background='black')
 
 def PlacementsGUM():  # placements des pacgums
    GUM = np.zeros(TBL.shape)
-   
+   global totalGum
    for x in range(LARGEUR):
       for y in range(HAUTEUR):
-         if ( TBL[x][y] == 0 and y != 5 and x>12):
+         if ( TBL[x][y] == 0):
             GUM[x][y] = 1
+            totalGum += 1 
    return GUM
             
 GUM = PlacementsGUM()   
@@ -110,10 +121,10 @@ GUM = PlacementsGUM()
 PacManPos = [5,5]
 
 Ghosts  = []
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "pink"  ]   )
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "orange"] )
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  ]   )
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "red"   ]     )         
+Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "pink"  , "left" , "on"]   )
+Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "orange", "right", "on"] )
+Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  , "up"   , "on"]   )
+Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "red"   , "down" , "on"]     )         
 
  
  
@@ -208,10 +219,210 @@ def Affiche():
             
 #################################################################
 ##
+##   ADDINGS
+
+def EatingGUMS():
+   global score, DistanceMap, eaten
+   x,y = PacManPos
+   if(GUM[x][y] == 1):
+      GUM[x][y]=0
+      score += 1
+      DistanceMap[x][y] = 100
+      eaten += 1
+
+def InitDistanceMap():
+   DistanceMap = np.zeros(TBL.shape)
+   
+   for x in range(LARGEUR):
+      for y in range(HAUTEUR):
+         if (TBL[x][y] == 1  or TBL[x][y] == 2):
+            DistanceMap[x][y] = sys.maxsize
+         elif (GUM[x][y] == 1):
+            DistanceMap[x][y] = 0
+         else:
+            DistanceMap[x][y] = 100
+   return DistanceMap
+
+DistanceMap = InitDistanceMap()
+
+
+def updateDistanceMap():
+   global DistanceMap, eaten, totalGum
+   change = False
+   while (True):
+      change = False
+      for x in range(LARGEUR):
+         for y in range(HAUTEUR):
+            if(DistanceMap[x][y] == sys.maxsize or DistanceMap[x][y] == 0):
+               continue
+            else:
+               left = DistanceMap[x-1][y] if (x-1 >=0) else sys.maxsize
+               right = DistanceMap[x+1][y] if (x+1<LARGEUR) else sys.maxsize
+               down = DistanceMap[x][y+1] if (y+1<HAUTEUR) else sys.maxsize
+               up = DistanceMap[x][y-1] if (y-1 >=0) else sys.maxsize
+               minimum = min(left, right, up, down)
+
+               if(minimum+1 != DistanceMap[x][y]):
+                  DistanceMap[x][y] = minimum+1
+                  change = True
+      if(change == False or eaten == totalGum):
+         break
+
+updateDistanceMap()
+
+def AfficheGhostsMap(gMap):
+   for y in range(HAUTEUR):
+      print("(",end='')
+      for x in range(LARGEUR):
+         if(gMap[x][y] > 1000):
+            print("M", end='')
+         else:
+            print(int(gMap[x][y]), end='')
+         print(",", end='')
+      print(") \n")
+
+def InitGhostDistanceMap():
+   DistanceMap = np.zeros(TBL.shape)
+   
+   for x in range(LARGEUR):
+      for y in range(HAUTEUR):
+         if (TBL[x][y] == 1  or TBL[x][y] == 2):
+            DistanceMap[x][y] = sys.maxsize
+         else:
+            DistanceMap[x][y] = 100
+   return DistanceMap
+
+PinkGhostMap = InitGhostDistanceMap()
+PinkGhostMap[Ghosts[0][0]][Ghosts[0][1]] = 0
+OrangeGhostMap = InitGhostDistanceMap()
+OrangeGhostMap[Ghosts[1][0]][Ghosts[1][1]] = 0
+BlueGhostMap = InitGhostDistanceMap()
+BlueGhostMap[Ghosts[2][0]][Ghosts[2][1]] = 0
+RedGhostMap = InitGhostDistanceMap()
+RedGhostMap[Ghosts[3][0]][Ghosts[3][1]] = 0
+
+def GhostDistanceMap(i, gMap): #update ghost maps one by one
+   global eaten, totalGum
+   change = False
+   while (True):
+      change = False
+      for x in range(LARGEUR):
+         for y in range(HAUTEUR):
+            if(gMap[x][y] == sys.maxsize):
+               continue
+            elif(x == Ghosts[i][0] and y == Ghosts[i][1]):
+               gMap[x][y] = 0
+            else:
+               left = gMap[x-1][y] if (x-1 >=0) else sys.maxsize
+               right = gMap[x+1][y] if (x+1<LARGEUR) else sys.maxsize
+               down = gMap[x][y+1] if (y+1<HAUTEUR) else sys.maxsize
+               up = gMap[x][y-1] if (y-1 >=0) else sys.maxsize
+               minimum = min(left, right, up, down)
+               print(minimum) # valeurs qui s'incrémentent à l'infini
+               if(minimum+1 < gMap[x][y]):
+                  gMap[x][y] = minimum+1
+                  # change = True fait planter
+      if(change == False or eaten == totalGum):
+         return gMap
+
+PinkGhostMap = GhostDistanceMap(0, PinkGhostMap)
+OrangeGhostMap = GhostDistanceMap(1, OrangeGhostMap)
+BlueGhostMap = GhostDistanceMap(2, BlueGhostMap)
+RedGhostMap = GhostDistanceMap(3, RedGhostMap)
+
+AfficheGhostsMap(PinkGhostMap)
+
+GhostsMap = InitGhostDistanceMap()
+
+def GeneralGhostsMap(): #global map made with the four ghost maps
+   global GhostsMap, PinkGhostMap, OrangeGhostMap, BlueGhostMap, RedGhostMap
+   for x in range(LARGEUR):
+      for y in range(HAUTEUR):
+         if(GhostsMap[x][y] == sys.maxsize):
+            continue
+         else:
+            GhostsMap[x][y] = min(PinkGhostMap[x][y], OrangeGhostMap[x][y], BlueGhostMap[x][y], RedGhostMap[x][y]) 
+
+GeneralGhostsMap()
+
+def CheckMovePac():
+   global GhostsMap
+   x,y = PacManPos
+   MinMove = sys.maxsize
+   MinMoveX = sys.maxsize
+   MinMoveY = sys.maxsize
+   if(TBL[x-1][y] == 0 and DistanceMap[x-1][y]<MinMove and x-1>=0 and GhostsMap[x-1][y]>3): #left
+      MinMove = DistanceMap[x-1][y]
+      MinMoveX = x-1
+      MinMoveY = y
+   if(TBL[x+1][y] == 0 and DistanceMap[x+1][y]<MinMove and x+1<=LARGEUR and GhostsMap[x-1][y]>3): #right
+      MinMove = DistanceMap[x+1][y]
+      MinMoveX = x+1
+      MinMoveY = y
+   if(TBL[x][y+1] == 0 and DistanceMap[x][y+1]<MinMove and y+1<=HAUTEUR and GhostsMap[x-1][y]>3): #down
+      MinMove = DistanceMap[x][y+1]
+      MinMoveX = x
+      MinMoveY = y+1
+   if(TBL[x][y-1] == 0 and DistanceMap[x][y-1]<MinMove and y-1>=0 and GhostsMap[x-1][y]>3): #up
+      MinMove = DistanceMap[x][y-1]
+      MinMoveX = x
+      MinMoveY = y-1
+   if(MinMove == sys.maxsize):
+      L = PacManPossibleMove()
+      choix = random.randrange(len(L))
+      MinMoveX = PacManPos[0] + L[choix][0]
+      MinMoveY = PacManPos[1] + L[choix][1]
+
+   return MinMoveX, MinMoveY
+
+def CheckWalls(idGhost, direction):
+   if(direction=="left"):
+      return True if TBL[Ghosts[idGhost][0]-1][Ghosts[idGhost][1]] == 1 else False
+   elif(direction=="right"):
+      return True if TBL[Ghosts[idGhost][0]+1][Ghosts[idGhost][1]] == 1 else False
+   elif(direction=="up"):
+      return True if TBL[Ghosts[idGhost][0]][Ghosts[idGhost][1]-1] == 1 else False
+   else: #down
+      return True if TBL[Ghosts[idGhost][0]][Ghosts[idGhost][1]+1] == 1 else False
+
+def CheckPossibleMoves(idGhost): #possible directions for the ghosts
+   count = 0
+   PossibleMove = []
+   if(TBL[Ghosts[idGhost][0]-1][Ghosts[idGhost][1]]==0):
+      count += 1
+      PossibleMove.append("left")
+   if(TBL[Ghosts[idGhost][0]+1][Ghosts[idGhost][1]]==0):
+      count += 1
+      PossibleMove.append("right")
+   if(TBL[Ghosts[idGhost][0]][Ghosts[idGhost][1]-1]==0):
+      count += 1
+      PossibleMove.append("up")
+   if(TBL[Ghosts[idGhost][0]][Ghosts[idGhost][1]+1]==0):
+      count += 1
+      PossibleMove.append("down")
+   return PossibleMove
+
+def startingMoves(idGhost): #possible directions when the ghosts are in their house
+   count = 0
+   PossibleMove = []
+   if(TBL[Ghosts[idGhost][0]-1][Ghosts[idGhost][1]]!=1):
+      count += 1
+      PossibleMove.append("left")
+   if(TBL[Ghosts[idGhost][0]+1][Ghosts[idGhost][1]]!=1):
+      count += 1
+      PossibleMove.append("right")
+   if(TBL[Ghosts[idGhost][0]][Ghosts[idGhost][1]-1]!=1):
+      count += 1
+      PossibleMove.append("up")
+   if(TBL[Ghosts[idGhost][0]][Ghosts[idGhost][1]+1]!=1):
+      count += 1
+      PossibleMove.append("down")
+   return PossibleMove
+
+#################################################################
+##
 ##  IA RANDOM
 
-
-      
 def PacManPossibleMove():
    L = []
    x,y = PacManPos
@@ -221,168 +432,79 @@ def PacManPossibleMove():
    if ( TBL[x-1][y  ] == 0 ): L.append((-1,0))
    return L
    
-def GhostsPossibleMove(x,y):
-   L = []
-   if ( TBL[x  ][y-1] == 2 ): L.append((0,-1))
-   if ( TBL[x  ][y+1] == 2 ): L.append((0, 1))
-   if ( TBL[x+1][y  ] == 2 ): L.append(( 1,0))
-   if ( TBL[x-1][y  ] == 2 ): L.append((-1,0))
-   return L
-   
 def IA():
-   global PacManPos, Ghosts
+   global PacManPos, Ghosts, eaten, totalGum, gameStatus
    #deplacement Pacman
-   # L = PacManPossibleMove()
-   # choix = random.randrange(len(L))
-   x,y = CheckMove()
+   x,y = CheckMovePac()
    PacManPos[0] = x
    PacManPos[1] = y
    EatingGUMS()
-   # PacManPos[0] += L[choix][0]
-   # PacManPos[1] += L[choix][1]
+   if(eaten == totalGum):
+      gameStatus = "won"
+   for i in range(0,4):
+      if(PacManPos[0] == Ghosts[i][0] and PacManPos[1] == Ghosts[i][1]):
+         gameStatus = "GO"
+
+   for i in range(0,4):
+      PossibleMove = CheckPossibleMoves(i) if(TBL[Ghosts[i][0]][Ghosts[i][1]] == 0) else startingMoves(i)
+      if(i == 0):
+         PinkGhostMap[Ghosts[i][0]][Ghosts[i][1]] = 1
+      elif(i == 1):
+         OrangeGhostMap[Ghosts[i][0]][Ghosts[i][1]] = 1
+      elif(i == 2):
+         BlueGhostMap[Ghosts[i][0]][Ghosts[i][1]] = 1
+      else:
+         RedGhostMap[Ghosts[i][0]][Ghosts[i][1]] = 1
+         
+      if(len(PossibleMove)>=3 or CheckWalls(i,Ghosts[i][3])==True): #croisement ou L
+         choix = random.randrange(len(PossibleMove))
+         Ghosts[i][3] = PossibleMove[choix]
+
+
+      if(Ghosts[i][3]=="right"):
+         Ghosts[i][0] = Ghosts[i][0]+1 #right
+      elif(Ghosts[i][3]=="left"):
+         Ghosts[i][0] = Ghosts[i][0]-1 #left
+      elif(Ghosts[i][3]=="down"):
+         Ghosts[i][1] = Ghosts[i][1]+1 #down
+      else:
+         Ghosts[i][1] = Ghosts[i][1]-1 #up
    
-   #deplacement Fantome
-   for F in Ghosts:
-      L = GhostsPossibleMove(F[0],F[1])
-      choix = random.randrange(len(L))
-      F[0] += L[choix][0]
-      F[1] += L[choix][1]
-
-#################################################################
-##
-##   ADDINGS
-
-def EatingGUMS():
-   global score
-   x,y = PacManPos
-   if(GUM[x][y] == 1):
-      GUM[x][y]=0
-      score += 1
-      DistanceMap[x][y] = 100
-      updateDistanceMap()
-      print("MIAM")
-
-def InitDistanceMap():
-   DistanceMap = np.zeros(TBL.shape)
-   
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR):
-         if (TBL[x][y] == 1  or TBL[x][y] == 2): #ok ?
-            DistanceMap[x][y] = sys.maxsize
-         elif (GUM[x][y] == 1):
-            DistanceMap[x][y] = 0
-         else: #utile ?
-            DistanceMap[x][y] = 100 #utile ?
-   return DistanceMap
-
-DistanceMap = InitDistanceMap()
-
-
-def updateDistanceMap():
-   global DistanceMap
-   # DistanceMap = InitDistanceMap()
-   change = 0
-   while (True):
-      # print("on reboucle")
-      # tmpDistanceMap = np.clone(DistanceMap)
-      change = 0
-      for x in range(LARGEUR):
-         for y in range(HAUTEUR):
-            if(DistanceMap[x][y] == sys.maxsize or DistanceMap[x][y] == 0):
-               continue
-            else:
-               if(x-1 >=0):
-                  left = DistanceMap[x-1][y]
-               else:
-                  left = sys.maxsize
-               if(x+1<LARGEUR):
-                  right = DistanceMap[x+1][y]
-               else:
-                  right = sys.maxsize
-               if(y+1<HAUTEUR):
-                  down = DistanceMap[x][y+1]
-               else:
-                  down = sys.maxsize
-               if(y-1 >=0):
-                  up = DistanceMap[x][y-1]
-               else:
-                  up = sys.maxsize
-               minimum = min(left, right, up, down)
-
-               if(minimum < DistanceMap[x][y] and minimum+1 != DistanceMap[x][y]):
-                  # print(f"left : {left}, right : {right}, down : {down}, up : {up}")
-         #          # print("avant :", DistanceMapTest[x][y])
-                  DistanceMap[x][y] = minimum+1
-                  change = 1
-         #          # print("après : ", DistanceMapTest[x][y])
-      if(change == 0):
-         print("on sort")
-         break
-
-updateDistanceMap()
-
-def CheckMove():
-   x,y = PacManPos
-   MinMove = sys.maxsize
-   MinMoveX = sys.maxsize
-   MinMoveY = sys.maxsize
-   if(TBL[x-1][y] == 0 and DistanceMap[x-1][y]<MinMove and x-1>=0): #left
-      # print("left :",MinMove)
-      MinMove = DistanceMap[x-1][y]
-      MinMoveX = x-1
-      MinMoveY = y
-   if(TBL[x+1][y] == 0 and DistanceMap[x+1][y]<MinMove and x+1<=LARGEUR): #right
-      # print("right :",MinMove)
-      MinMove = DistanceMap[x+1][y]
-      MinMoveX = x+1
-      MinMoveY = y
-   if(TBL[x][y+1] == 0 and DistanceMap[x][y+1]<MinMove and y+1<=HAUTEUR): #down
-      MinMove = DistanceMap[x][y+1]
-      # print("down :",MinMove)
-      MinMoveX = x
-      MinMoveY = y+1
-   if(TBL[x][y-1] == 0 and DistanceMap[x][y-1]<MinMove and y-1>=0): #up
-      MinMove = DistanceMap[x][y-1]
-      # print("up :",MinMove)
-      MinMoveX = x
-      MinMoveY = y-1
-   # print("move : ",MinMove)
-   return MinMoveX, MinMoveY
-
-
-def AfficheDistanceMap():
-   global DistanceMap
-   for y in range(HAUTEUR):
-      print("(",end='')
-      for x in range(LARGEUR):
-         if(DistanceMap[x][y] > 1000):
-            print("M", end='')
-         else:
-            if(PacManPos[0] == x and PacManPos[1] == y):
-               print("X", end='')
-            else:
-               print(int(DistanceMap[x][y]), end='')
-         print(",", end='')
-      print(") \n")
-
-i = 0
+      if(PacManPos[0] == Ghosts[i][0] and PacManPos[1] == Ghosts[i][1]):
+         gameStatus = "GO"
       
 #################################################################
 ##
 ##   GAME LOOP
 
 def MainLoop():
-   global i
-   i += 1
-   print(i)
-   # updateDistanceMap()
-   IA()
-   # AfficheDistanceMap()
-   Affiche()
- 
- 
+   global gameStatus, PinkGhostMap, OrangeGhostMap, BlueGhostMap, RedGhostMap
+   if(gameStatus == "playing"):
+      IA()
+      updateDistanceMap()
+      PinkGhostMap = GhostDistanceMap(0, PinkGhostMap)
+      OrangeGhostMap = GhostDistanceMap(1, OrangeGhostMap)
+      BlueGhostMap = GhostDistanceMap(2, BlueGhostMap)
+      RedGhostMap = GhostDistanceMap(3, RedGhostMap)
+      GeneralGhostsMap()
+      Affiche()
+   elif(gameStatus == "won"):
+      canvas.delete("all")
+      canvas.create_rectangle(0, 0, screeenWidth, screenHeight, fill="blue")
+      canvas.create_text(screeenWidth // 2, screenHeight- 300 , text = "Won !", fill ="white", font = PoliceTexte)
+   else: #GO
+      canvas.delete("all")
+      canvas.create_rectangle(0, 0, screeenWidth, screenHeight, fill="black")
+      canvas.create_text(screeenWidth // 2, screenHeight- 300 , text = "Game Over", fill ="red", font = PoliceTexte)     
+
+
 ###########################################:
 #  demarrage de la fenetre - ne pas toucher
 
 AfficherPage(0)
 Window.mainloop()
+   
+   
+    
+   
+   
