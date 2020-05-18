@@ -55,5 +55,4 @@ while True:
         net.send(json.dumps(payload))
         print("quitting the game")
         break
-    print(game_obj)
     

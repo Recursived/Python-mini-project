@@ -34,6 +34,10 @@ EMPTY = -1
 WINDOW_LENGTH = 4
 
 
+########## HELPER FUNCTION ##########
+
+def clamp(n, smallest, largest): return max(smallest, min(n, largest))
+
 
 ########### IA FUNCTION #############
 def make_move(grille, column_count, player, column):
@@ -44,59 +48,164 @@ def make_move(grille, column_count, player, column):
     else:
         return False
 
-def evaluate_window(window, piece, lst_players):
+
+def score_position(board, position, piece):
     score = 0
+    x, y = position
 
-    if window.count(piece) == 4:
-        score += 100
-    elif window.count(piece) == 3 and window.count(EMPTY) == 1:
-        score += 30
-    elif window.count(piece) == 2 and window.count(EMPTY) == 2:
-        score += 10
+    if x == COLUMN_COUNT // 2:
+        score += 5
+    
+    left = clamp(x-3,0, COLUMN_COUNT-1)
+    right = clamp(x+3, 0, COLUMN_COUNT-1)
+    up = clamp(y-3, 0, ROW_COUNT-1)
+    down = clamp(y+3, 0, ROW_COUNT-1)
 
-    for i in range(len(lst_players)):
-        if i != piece and  window.count(i) == 3 and window.count(EMPTY) == 1:
-            score += 50
-        if i != piece and window.count(i) == 2 and window.count(EMPTY) == 2:
-            score += 15
+    count_enemy = 0
+    count_self = 0
+    for i in range(left, x+1):
+        if board[y][i] == piece:
+            count_self += 1
+        elif board[y][i] != EMPTY and board[y][i] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
+    
+    score += count_self * 25
+    score += count_enemy * 25
+
+    count_enemy = 0
+    count_self = 0
+    for i in range(x, right):
+        if board[y][i] == piece:
+            count_self += 1
+        elif board[y][i] != EMPTY and board[y][i] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
+    
+    score += count_self * 25
+    score += count_enemy * 25
+
+    count_enemy = 0
+    count_self = 0
+    for i in range(up, y+1):
+        if board[i][x] == piece:
+            count_self += 1
+        elif board[i][x] != EMPTY and board[i][x] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
+    
+    score += count_self * 25
+    score += count_enemy * 25
+
+    count_enemy = 0
+    count_self = 0
+    for i in range(y, down):
+        if board[i][x] == piece:
+            count_self += 1
+        elif board[i][x] != EMPTY and board[i][x] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
+    
+    score += count_self * 25
+    score += count_enemy * 25
+
+    # Upper left 
+    index = 0
+    count_enemy = 0
+    count_self = 0
+    while x + index >= 0 and y + index >= 0:
+        if board[y + index][x + index] == piece:
+            count_self += 1
+        elif board[y + index][x + index] != EMPTY and board[y + index][x + index] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
         
+        index -= 1
+
+    score += count_self * 25
+    score += count_enemy * 25
+
+    # Bottom right
+    index = 0
+    count_enemy = 0
+    count_self = 0
+    while x + index  < COLUMN_COUNT and y + index < ROW_COUNT:
+        if board[y + index][x + index] == piece:
+            count_self += 1
+        elif board[y + index][x + index] != EMPTY and board[y + index][x + index] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
+        
+        index += 1
+    
+    score += count_self * 25
+    score += count_enemy * 25
+
+    # Bottom left
+    index = 0
+    count_enemy = 0
+    count_self = 0
+    while x - index  >= 0 and y + index < ROW_COUNT:
+        if board[y + index][x - index] == piece:
+            count_self += 1
+        elif board[y + index][x - index] != EMPTY and board[y + index][x - index] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
+        
+        index += 1
+    
+    score += count_self * 25
+    score += count_enemy * 25
+
+    index = 0
+    count_enemy = 0
+    count_self = 0
+    while x + index  < COLUMN_COUNT and y - index >= 0:
+        if board[y - index][x + index] == piece:
+            count_self += 1
+        elif board[y - index][x + index] != EMPTY and board[y - index][x + index] != piece:
+            count_enemy += 1
+
+        if count_enemy > 0 and count_self > 0:
+            count_enemy = 0
+            count_self = 0
+            break
+        
+        index += 1
+    
+    score += count_self * 25
+    score += count_enemy * 25
 
     return score
-
-def score_position(board, piece, lst_players):
-    score = 0
-
-    ## Score center column
-    center_array = [val[COLUMN_COUNT//2] for val in board]
-    center_count = center_array.count(piece)
-    score += center_count * 3
-
-    ## Score Horizontal
-    for r in range(ROW_COUNT):
-        row_array = [val for val in board[r][:]]
-        for c in range(COLUMN_COUNT-3):
-            window = row_array[c:c+WINDOW_LENGTH]
-            score +=  evaluate_window(window, piece, lst_players)
-
-    ## Score Vertical
-    for c in range(COLUMN_COUNT):
-        col_array = [val[c] for val in board]
-        for r in range(ROW_COUNT-3):
-            window = col_array[r:r+WINDOW_LENGTH]
-            score +=  evaluate_window(window, piece, lst_players)
-
-    ## Score positive sloped diagonal
-    for r in range(ROW_COUNT-3):
-        for c in range(COLUMN_COUNT-3):
-            window = [board[r+i][c+i] for i in range(WINDOW_LENGTH)]
-            score +=  evaluate_window(window, piece, lst_players)
-
-    for r in range(ROW_COUNT-3):
-        for c in range(COLUMN_COUNT-3):
-            window = [board[r+3-i][c+i] for i in range(WINDOW_LENGTH)]
-            score +=  evaluate_window(window, piece, lst_players)
-
-    return score
+    
 
 
 def think(game_obj): # This function returns a move
@@ -106,15 +215,17 @@ def think(game_obj): # This function returns a move
             possible_moves.append(i)
     grille = game_obj["grid"]
 
-    score = -9999999999
+    score = 0
     best_move = random.choice(possible_moves)
     print("*********************")
+    pprint(grille)
     for move in possible_moves:
-        c_grille = deepcopy(grille)
-        make_move(c_grille, game_obj["column_count"], net.id, move)
-        pos_score = score_position(c_grille, net.id, game_obj["players"])
+        if game_obj["column_count"][move] == -1:
+            continue
+
+        pos =  move, game_obj["column_count"][move]
+        pos_score = score_position(grille, pos, net.id)
         print(f"move pos : {move} --> score : {pos_score}")
-        pprint(c_grille)
         if pos_score > score:
             best_move = move
             score = pos_score
@@ -146,5 +257,4 @@ while True:
         net.send(json.dumps(payload))
         print("quitting the game")
         break
-    # pprint(game_obj["grid"])
     
