@@ -48,163 +48,59 @@ def make_move(grille, column_count, player, column):
     else:
         return False
 
+def get_score(window, piece, lst_players):
+    if window.count(piece) == 3 and window.count(EMPTY) == 1:
+        return 100
+    elif window.count(piece) == 2 and window.count(EMPTY) == 2:
+        return 30
+    elif window.count(piece) == 1  and window.count(EMPTY) == 3:
+        return 10
+    else:
+        for id_player in range(len(lst_players)):
+            if id_player != lst_players:
+                if window.count(id_player) == 3 and window.count(EMPTY) == 1:
+                    return 50
+                elif window.count(piece) == 2 and window.count(EMPTY) == 2:
+                    return 15
+    return 0
 
-def score_position(board, position, piece):
+
+def score_position(board, position, piece, lst_players):
     score = 0
     x, y = position
 
     if x == COLUMN_COUNT // 2:
         score += 5
     
-    left = clamp(x-3,0, COLUMN_COUNT-1)
-    right = clamp(x+3, 0, COLUMN_COUNT-1)
-    up = clamp(y-3, 0, ROW_COUNT-1)
-    down = clamp(y+3, 0, ROW_COUNT-1)
+    left = clamp(x-WINDOW_LENGTH+1,0, COLUMN_COUNT) # On rajoute un pour le slicing 
+    right = clamp(x+WINDOW_LENGTH, 0, COLUMN_COUNT)
+    up = clamp(y-WINDOW_LENGTH+1, 0, ROW_COUNT) # On rajoute un pour le slicing 
+    down = clamp(y+WINDOW_LENGTH, 0, ROW_COUNT)
 
-    count_enemy = 0
-    count_self = 0
-    for i in range(left, x+1):
-        if board[y][i] == piece:
-            count_self += 1
-        elif board[y][i] != EMPTY and board[y][i] != piece:
-            count_enemy += 1
+    horizontal = board[y][left:right]
+    vertical = [board[i][x] for i in range(up, down)]
+    positive_diag = [board[y-i][x-i] for i in range(3, -1,  -1) if y - i >= 0 and x-i >= 0] + [board[y+i][x+i] for i in range(1, 4) if y + i < ROW_COUNT and x + i < COLUMN_COUNT]
+    negative_diag = [board[y+i][x-i] for i in range(3, -1,  -1) if y + i < ROW_COUNT  and x-i >= 0] + [board[y-i][x+i] for i in range(1, 4) if y - i >= 0 and x + i < COLUMN_COUNT]
 
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
+    for i in range(len(horizontal) - WINDOW_LENGTH):
+        window = horizontal[i:WINDOW_LENGTH+i]
+        score = max(score, get_score(window, piece, lst_players))
     
-    score += count_self * 25
-    score += count_enemy * 25
+    for i in range(len(vertical) - WINDOW_LENGTH):
+        window = vertical[i:WINDOW_LENGTH+i]
+        score = max(score, get_score(window, piece, lst_players))
 
-    count_enemy = 0
-    count_self = 0
-    for i in range(x, right):
-        if board[y][i] == piece:
-            count_self += 1
-        elif board[y][i] != EMPTY and board[y][i] != piece:
-            count_enemy += 1
+    if len(positive_diag) >= 4:
+        for i in range(len(positive_diag) - WINDOW_LENGTH):
+            window = positive_diag[i:WINDOW_LENGTH+i]
+            score = max(score, get_score(window, piece, lst_players))
 
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
-    
-    score += count_self * 25
-    score += count_enemy * 25
-
-    count_enemy = 0
-    count_self = 0
-    for i in range(up, y+1):
-        if board[i][x] == piece:
-            count_self += 1
-        elif board[i][x] != EMPTY and board[i][x] != piece:
-            count_enemy += 1
-
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
-    
-    score += count_self * 25
-    score += count_enemy * 25
-
-    count_enemy = 0
-    count_self = 0
-    for i in range(y, down):
-        if board[i][x] == piece:
-            count_self += 1
-        elif board[i][x] != EMPTY and board[i][x] != piece:
-            count_enemy += 1
-
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
-    
-    score += count_self * 25
-    score += count_enemy * 25
-
-    # Upper left 
-    index = 0
-    count_enemy = 0
-    count_self = 0
-    while x + index >= 0 and y + index >= 0:
-        if board[y + index][x + index] == piece:
-            count_self += 1
-        elif board[y + index][x + index] != EMPTY and board[y + index][x + index] != piece:
-            count_enemy += 1
-
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
+    if len(negative_diag) >= 4:
+        for i in range(len(negative_diag) - WINDOW_LENGTH):
+            window = negative_diag[i:WINDOW_LENGTH+i]
+            score = max(score, get_score(window, piece, lst_players))
         
-        index -= 1
-
-    score += count_self * 25
-    score += count_enemy * 25
-
-    # Bottom right
-    index = 0
-    count_enemy = 0
-    count_self = 0
-    while x + index  < COLUMN_COUNT and y + index < ROW_COUNT:
-        if board[y + index][x + index] == piece:
-            count_self += 1
-        elif board[y + index][x + index] != EMPTY and board[y + index][x + index] != piece:
-            count_enemy += 1
-
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
-        
-        index += 1
-    
-    score += count_self * 25
-    score += count_enemy * 25
-
-    # Bottom left
-    index = 0
-    count_enemy = 0
-    count_self = 0
-    while x - index  >= 0 and y + index < ROW_COUNT:
-        if board[y + index][x - index] == piece:
-            count_self += 1
-        elif board[y + index][x - index] != EMPTY and board[y + index][x - index] != piece:
-            count_enemy += 1
-
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
-        
-        index += 1
-    
-    score += count_self * 25
-    score += count_enemy * 25
-
-    index = 0
-    count_enemy = 0
-    count_self = 0
-    while x + index  < COLUMN_COUNT and y - index >= 0:
-        if board[y - index][x + index] == piece:
-            count_self += 1
-        elif board[y - index][x + index] != EMPTY and board[y - index][x + index] != piece:
-            count_enemy += 1
-
-        if count_enemy > 0 and count_self > 0:
-            count_enemy = 0
-            count_self = 0
-            break
-        
-        index += 1
-    
-    score += count_self * 25
-    score += count_enemy * 25
-
-    return score
+    return score+5 if  x == COLUMN_COUNT // 2 else score
     
 
 
@@ -224,7 +120,7 @@ def think(game_obj): # This function returns a move
             continue
 
         pos =  move, game_obj["column_count"][move]
-        pos_score = score_position(grille, pos, net.id)
+        pos_score = score_position(grille, pos, net.id, game_obj["players"])
         print(f"move pos : {move} --> score : {pos_score}")
         if pos_score > score:
             best_move = move

@@ -189,7 +189,13 @@ def gui_loop():
                     yc = y * 100 
                     color = game_obj["colors_player"][game_obj["grid"][x][y]]
                     canvas.create_oval(yc+10,xc+10,yc+90,xc+90,outline=color, fill=color, width="4" )
-
+                    canvas.create_text(
+                        yc+10,
+                        xc+10,
+                        fill="white",
+                        font="Times 15 italic bold",
+                        text=str(game_obj["grid"][x][y])
+                    )
 
 def make_move(game_obj, player, column):
     if game_obj["column_count"][column] == -1: return False
