@@ -170,7 +170,7 @@ game_obj = {
     "players" : [],
     "player_turn": random.randint(0, MAX_PLAYER - 1),
     "colors_player": [ "red", "yellow", "blue", "green"],
-    "state" : GameState.connection.value, # On démarre par la phase de connection
+    "state" : GameState.connection.value, # On démarre par la phase de connexion
 }
 
 
