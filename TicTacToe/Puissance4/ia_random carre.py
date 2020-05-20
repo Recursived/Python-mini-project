@@ -13,7 +13,7 @@ class State(enum.Enum):
 
 ############ IA ELEMENTS #############
 
-type_ia = 0 # ia normale de P4
+type_ia = 1 # ia carre de P4
 ia_state = State.waiting.value
 payload = {}
 net = network.Network()

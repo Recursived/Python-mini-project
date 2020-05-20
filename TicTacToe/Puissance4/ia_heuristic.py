@@ -26,18 +26,14 @@ if response != True:
 
 game_obj = None
 
+print(f"Je suis le player {net.id}")
+
 ROW_COUNT = 6
 COLUMN_COUNT = 7
 
 
 EMPTY = -1
 WINDOW_LENGTH = 4
-
-
-########## HELPER FUNCTION ##########
-
-def clamp(n, smallest, largest): return max(smallest, min(n, largest))
-
 
 ########### IA FUNCTION #############
 def make_move(grille, column_count, player, column):
@@ -48,60 +44,59 @@ def make_move(grille, column_count, player, column):
     else:
         return False
 
-def get_score(window, piece, lst_players):
-    if window.count(piece) == 3 and window.count(EMPTY) == 1:
-        return 100
-    elif window.count(piece) == 2 and window.count(EMPTY) == 2:
-        return 30
-    elif window.count(piece) == 1  and window.count(EMPTY) == 3:
-        return 10
-    else:
-        for id_player in range(len(lst_players)):
-            if id_player != lst_players:
-                if window.count(id_player) == 3 and window.count(EMPTY) == 1:
-                    return 50
-                elif window.count(piece) == 2 and window.count(EMPTY) == 2:
-                    return 15
-    return 0
-
-
-def score_position(board, position, piece, lst_players):
+def evaluate_window(window, piece, lst_players):
     score = 0
-    x, y = position
 
-    if x == COLUMN_COUNT // 2:
-        score += 5
-    
-    left = clamp(x-WINDOW_LENGTH+1,0, COLUMN_COUNT) # On rajoute un pour le slicing 
-    right = clamp(x+WINDOW_LENGTH, 0, COLUMN_COUNT)
-    up = clamp(y-WINDOW_LENGTH+1, 0, ROW_COUNT) # On rajoute un pour le slicing 
-    down = clamp(y+WINDOW_LENGTH, 0, ROW_COUNT)
+    if window.count(piece) == 4:
+        score = 100
+    elif window.count(piece) == 3 and window.count(EMPTY) == 1:
+        score = 30
+    elif window.count(piece) == 2 and window.count(EMPTY) == 2:
+        score = 10
 
-    horizontal = board[y][left:right]
-    vertical = [board[i][x] for i in range(up, down)]
-    positive_diag = [board[y-i][x-i] for i in range(3, -1,  -1) if y - i >= 0 and x-i >= 0] + [board[y+i][x+i] for i in range(1, 4) if y + i < ROW_COUNT and x + i < COLUMN_COUNT]
-    negative_diag = [board[y+i][x-i] for i in range(3, -1,  -1) if y + i < ROW_COUNT  and x-i >= 0] + [board[y-i][x+i] for i in range(1, 4) if y - i >= 0 and x + i < COLUMN_COUNT]
-
-    for i in range(len(horizontal) - WINDOW_LENGTH):
-        window = horizontal[i:WINDOW_LENGTH+i]
-        score = max(score, get_score(window, piece, lst_players))
-    
-    for i in range(len(vertical) - WINDOW_LENGTH):
-        window = vertical[i:WINDOW_LENGTH+i]
-        score = max(score, get_score(window, piece, lst_players))
-
-    if len(positive_diag) >= 4:
-        for i in range(len(positive_diag) - WINDOW_LENGTH):
-            window = positive_diag[i:WINDOW_LENGTH+i]
-            score = max(score, get_score(window, piece, lst_players))
-
-    if len(negative_diag) >= 4:
-        for i in range(len(negative_diag) - WINDOW_LENGTH):
-            window = negative_diag[i:WINDOW_LENGTH+i]
-            score = max(score, get_score(window, piece, lst_players))
+    for i in range(len(lst_players)):
+        if i != piece and  window.count(i) == 3 and window.count(EMPTY) == 1:
+            score = 50
+        if i != piece and window.count(i) == 2 and window.count(EMPTY) == 2:
+            score = 15
         
-    return score+5 if  x == COLUMN_COUNT // 2 else score
-    
+
+    return score
+
+def score_position(board, piece, lst_players):
+    score = 0
+
+    ## Score center column
+    center_array = [val[COLUMN_COUNT//2] for val in board]
+    center_count = center_array.count(piece)
+    score += center_count * 3
+
+    ## Score Horizontal
+    for r in range(ROW_COUNT):
+        row_array = [val for val in board[r][:]]
+        for c in range(COLUMN_COUNT-3):
+            window = row_array[c:c+WINDOW_LENGTH]
+            score +=  evaluate_window(window, piece, lst_players)
+
+    ## Score Vertical
+    for c in range(COLUMN_COUNT):
+        col_array = [val[c] for val in board]
+        for r in range(ROW_COUNT-3):
+            window = col_array[r:r+WINDOW_LENGTH]
+            score +=  evaluate_window(window, piece, lst_players)
+
+    ## Score positive sloped diagonal
+    for r in range(ROW_COUNT-3):
+        for c in range(COLUMN_COUNT-3):
+            window = [board[r+i][c+i] for i in range(WINDOW_LENGTH)]
+            score +=  evaluate_window(window, piece, lst_players)
+
+    for r in range(ROW_COUNT-3):
+        for c in range(COLUMN_COUNT-3):
+            window = [board[r+3-i][c+i] for i in range(WINDOW_LENGTH)]
+            score +=  evaluate_window(window, piece, lst_players)
+
+    return score
 
 
 def think(game_obj): # This function returns a move
@@ -111,17 +106,12 @@ def think(game_obj): # This function returns a move
             possible_moves.append(i)
     grille = game_obj["grid"]
 
-    score = 0
+    score = -9999999999
     best_move = random.choice(possible_moves)
-    print("*********************")
-    pprint(grille)
     for move in possible_moves:
-        if game_obj["column_count"][move] == -1:
-            continue
-
-        pos =  move, game_obj["column_count"][move]
-        pos_score = score_position(grille, pos, net.id, game_obj["players"])
-        print(f"move pos : {move} --> score : {pos_score}")
+        c_grille = deepcopy(grille)
+        make_move(c_grille, game_obj["column_count"], net.id, move)
+        pos_score = score_position(c_grille, net.id, game_obj["players"])
         if pos_score > score:
             best_move = move
             score = pos_score

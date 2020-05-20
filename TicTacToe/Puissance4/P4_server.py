@@ -151,12 +151,12 @@ class GameState(enum.Enum):
 
 ####### GAME RELATED VARIABLES #########
 parser = argparse.ArgumentParser()
-parser.add_argument("nb_player", type=int, help="Set the number of player in the game (value must between 0-4)")
+parser.add_argument("nb_player", type=int, help="Set the number of player in the game (value must between 2-4)")
 args = parser.parse_args()
 
 ROW_COUNT = 6
 COLUMN_COUNT = 7
-MAX_PLAYER = max(0, min(args.nb_player, 4))
+MAX_PLAYER = max(2, min(args.nb_player, 4))
 VACANT = -1
 
 id_count = 0
